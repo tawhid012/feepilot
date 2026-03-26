@@ -5,6 +5,12 @@ const corsHeaders = {
 
 const encoder = new TextEncoder();
 
+// NOTE: Hardcoded admin credentials are insecure and should only be used for dev/testing.
+// For production, use Supabase Edge Function secrets (ADMIN_USERNAME/ADMIN_PASSWORD/ADMIN_SESSION_SECRET).
+const ADMIN_USERNAME = "admin@feepilot";
+const ADMIN_PASSWORD = "limuxagencies";
+const ADMIN_SESSION_SECRET = "feepilot-admin-session-secret-v1";
+
 function toHex(buffer: ArrayBuffer) {
   return [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -22,18 +28,7 @@ Deno.serve(async (req) => {
 
   try {
     const { username, password } = await req.json();
-    const adminUsername = Deno.env.get("ADMIN_USERNAME");
-    const adminPassword = Deno.env.get("ADMIN_PASSWORD");
-    const sessionSecret = Deno.env.get("ADMIN_SESSION_SECRET");
-
-    if (!adminUsername || !adminPassword || !sessionSecret) {
-      return new Response(JSON.stringify({ error: "Admin env vars are missing" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (username !== adminUsername || password !== adminPassword) {
+    if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
       return new Response(JSON.stringify({ error: "Invalid credentials" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -41,7 +36,7 @@ Deno.serve(async (req) => {
     }
 
     const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
-    const token = await signSession(`admin:${expiresAt}`, sessionSecret);
+    const token = await signSession(`admin:${expiresAt}`, ADMIN_SESSION_SECRET);
 
     return new Response(JSON.stringify({ token }), {
       status: 200,
